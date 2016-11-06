@@ -1,0 +1,22 @@
+{
+  "name": "smb_data",
+  "version": "1.0.0",
+  "description": "Created with my fork of the JSNES emulator meant to run in a nodejs process.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/billautomata/smb_data.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/billautomata/smb_data/issues"
+  },
+  "homepage": "https://github.com/billautomata/smb_data#readme",
+  "dependencies": {
+    "synaptic": "git+https://github.com/billautomata/synaptic.git"
+  }
+}
