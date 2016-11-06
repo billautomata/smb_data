@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/billautomata/smb_data#readme",
   "dependencies": {
+    "jpeg-js": "^0.2.0",
     "synaptic": "git+https://github.com/billautomata/synaptic.git"
   }
 }
