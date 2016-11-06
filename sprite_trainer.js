@@ -2,9 +2,9 @@ var jpeg = require('jpeg-js')
 var fs = require('fs')
 var synaptic = require('synaptic'); // this line is not needed in the browser
 
-var TRAINING_RATE = 0.001
+var TRAINING_RATE = 0.00001
 var ITERATIONS = 1000000
-var HIDDEN_SIZE = 4
+var HIDDEN_SIZE = 8
 
 console.log('starting up')
 
@@ -25,7 +25,7 @@ control_data_all.forEach(function(state){
 console.log(control_data[0])
 
 console.log('making the network')
-var myNetwork = new Architect.Perceptron(memory_data[0].length, HIDDEN_SIZE * 2, HIDDEN_SIZE, control_data[0].length)
+var myNetwork = new Architect.Perceptron(memory_data[0].length, HIDDEN_SIZE * 3, HIDDEN_SIZE, control_data[0].length)
 console.log('done making the network')
 var trainer = new Trainer(myNetwork)
 
@@ -62,7 +62,7 @@ trainer.train(trainingSet,{
       every: 5, // repeat this task every 500 iterations
       do: function(data) {
           // console.log(data.error)
-          fs.writeFileSync('./mb_ppu_network_bigset.json', JSON.stringify(myNetwork.toJSON(),null,2), 'utf-8')
+          fs.writeFileSync('./mb_ppu_network_bigset_run2.json', JSON.stringify(myNetwork.toJSON(),null,2), 'utf-8')
           return false;
       }
     }
