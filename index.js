@@ -2,6 +2,12 @@ var jpeg = require('jpeg-js')
 var fs = require('fs')
 var synaptic = require('synaptic'); // this line is not needed in the browser
 
+var TRAINING_RATE = 0.0001
+var ITERATIONS = 1000000
+var HIDDEN_SIZE = 16
+var INPUT_SIZE = 32
+var images_to_load = 64
+var RANDOM = false
 
 console.log('starting up')
 
@@ -37,10 +43,14 @@ Perceptron.prototype.constructor = Perceptron;
 var memory_width = 2048
 var image_size = 256 * 240 * 3
 
-var memory_size_to_load = 32
+var width = 25
+var height = 23
+image_size = width * height * 3
+
+var memory_size_to_load = INPUT_SIZE
 
 console.log('making the network')
-var myNetwork = new Architect.Perceptron(memory_size_to_load + 1, 8, 32, 1)
+var myNetwork = new Architect.Perceptron(memory_size_to_load + 1, HIDDEN_SIZE, 3)
 console.log('done making the network')
 var trainer = new Trainer(myNetwork)
 
@@ -52,7 +62,7 @@ console.log('mem data length', memory_data.length)
 var jpegData
 var rawImageData
 console.log('loading image data')
-var images_to_load = 2
+
 var mem_step = Math.ceil(memory_data.length / images_to_load)
 
 memory_data.forEach(function(v,idx){
@@ -61,19 +71,17 @@ memory_data.forEach(function(v,idx){
     return
   }
   console.log(idx)
-  jpegData = fs.readFileSync('./output/'+idx+'.jpg')
+  jpegData = fs.readFileSync('./output/test/'+idx+'.jpg')
   rawImageData = jpeg.decode(jpegData, true)
-  var img = []
-
-  // console.log(rawImageData.data.slice(0,100))
-
-  rawImageData.data.forEach(function(v,idx){
-    // console.log(idx,idx%4,v)
-    if(idx % 4 === 3){
-    } else {
-      img.push(v)
-    }
-  })
+  var img = []  // [r,g,b], [r,g,b]
+  for(var i = 0; i < rawImageData.data.length; i+=4){
+    img.push([
+      rawImageData.data[i],
+      rawImageData.data[i+1],
+      rawImageData.data[i+2]
+    ])
+  }
+  // console.log('img[3010]', img[3010])
   image_data.push(img)
 })
 
@@ -82,7 +90,7 @@ console.log('values found in the image', image_data[0].length)
 
 // build the training data for each pixel
 // input: [[memory],[pixel_index]]    // memory + pixel index
-// output: pixel_bufer[pixel_index]   // pixel value
+// output: [r,g,b]   // pixel value
 
 var trainingSet = []
 image_data.forEach(function(d,idx){
@@ -91,36 +99,74 @@ image_data.forEach(function(d,idx){
   memory_data_remapped = memory_data_remapped.map(function(o){return o *= (1.0/255.0) })
 
   // for each pixel
-  d.forEach(function(pixel_value, pixel_idx){
+  d.forEach(function(pixel_values, pixel_idx){
     // append the pixel index to the memory data
     var input_data = memory_data_remapped.concat([pixel_idx/d.length])
     // console.log(input_data[memory_size_to_load])
+    // console.log(pixel_values.map(function(o){return o *= (1.0/255.0)}))
     trainingSet.push({
       input: input_data,
-      output: [pixel_value].map(function(o){return o *= (1.0/255.0) })
+      output: pixel_values.map(function(o){return o *= (1.0/255.0) })
     })
   })
   console.log(idx,'training set size', trainingSet.length)
 })
 
 // trainer.train(trainingSet.slice(0,1000),{
-console.log('runing trainer')
+console.log('running trainer')
 trainer.train(trainingSet,{
-    rate: .001,
-    iterations: 1000,
+    rate: TRAINING_RATE,
+    iterations: ITERATIONS,
     error: .005,
-    shuffle: false,
+    shuffle: true,
     log: 1,
     cost: Trainer.cost.CROSS_ENTROPY,
     schedule: {
-      every: 20, // repeat this task every 500 iterations
+      every: 5, // repeat this task every 500 iterations
       do: function(data) {
-          console.log('writing network')
-          fs.writeFileSync('./network.json', JSON.stringify(myNetwork.toJSON(),null,2), 'utf-8')
-          // custom log
-          // console.log("error", data.error, "iterations", data.iterations, "rate", data.rate);
-          // if (someCondition)
-              // return true; // abort/stop training
+          // console.log('writing network')
+          var jpeg = require('jpeg-js');
+          // var width = 256, height = 240;
+          var frameData = new Buffer(width * height * 4);
+          var i = 0;
+
+          var test_memory_idx = Math.floor(Math.random()*memory_data.length)
+          var m_data = memory_data[test_memory_idx].slice(0,memory_size_to_load).map(function(o){return o *= (1.0/255.0) })
+
+          if(RANDOM){
+            m_data = m_data.map(function(o) { return Math.random() })
+          }
+
+          var pixel_idx = 0
+          var pixel_length = width * height * 3
+          var position_percent
+          while (i < frameData.length) {
+            position_percent = pixel_idx/pixel_length
+            var pixels = myNetwork.activate(m_data.concat([position_percent]))
+
+            if(Math.random() < 0.0001){
+              console.log(Math.floor(pixels[0] * 255), position_percent)
+            }
+
+            frameData[i] = Math.floor(pixels[0] * 255); // red
+            i++
+            pixel_idx++
+            frameData[i] = Math.floor(pixels[1] * 255); // g
+            i++
+            frameData[i] = Math.floor(pixels[2] * 255) // b
+            i++
+            frameData[i] = 0xFF; // alpha - ignored in JPEGs
+            i++
+          }
+          var rawImageData = {
+            data: frameData,
+            width: width,
+            height: height
+          };
+          var jpegImageData = jpeg.encode(rawImageData, 100);
+          // console.log(jpegImageData)
+          fs.writeFileSync('./test.jpg', jpegImageData.data)
+
           return false;
       }
     }
